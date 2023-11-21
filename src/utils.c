@@ -112,8 +112,8 @@ void Stack_Dispose( Stack *stack ) {
 token_ret_t token_init(TokenT *token,TokenType type, BufferT *buff) {
     token->type = type;
     char *token_value = buffer_export(buff);
-
-    fprintf(stderr, "%s \n", token_value);
+    token->value.str = NULL;
+    // fprintf(stderr, "%s \n", token_value);
 
     if (token_value == NULL) {
         return VALUE_ASSIGNMENT_FAIL;
@@ -124,7 +124,7 @@ token_ret_t token_init(TokenT *token,TokenType type, BufferT *buff) {
         return INT_CONVERSION_SUCCES;
 
     }
-    else if (type == TOKEN_DECIMAL) {
+    else if (type == TOKEN_DOUBLE) {
         token->value.d = strtod(token_value,NULL);
         return DOUBLE_CONVERTION_SUCCES;
     }
@@ -141,7 +141,7 @@ void print_Token(TokenT *token){
         case TOKEN_INTEGER:
             printf("%d\n",token->value.i);
             break;
-        case TOKEN_DECIMAL:
+        case TOKEN_DOUBLE:
             printf("%f\n",token->value.d);
             break;
         default:
@@ -153,5 +153,4 @@ void print_Token(TokenT *token){
 void token_dtor(TokenT *token) {
     free(token->value.str);
     token->value.str = NULL;
-    free(token);
 }

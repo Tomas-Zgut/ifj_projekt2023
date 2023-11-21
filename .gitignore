@@ -2,3 +2,6 @@ src/*.o
 src/*.exe
 src/scanner
 src/test_table
+*.o
+IFJcode23
+.vscode/*

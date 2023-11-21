@@ -13,19 +13,61 @@ bool check_for_keyword(char* text) {
 
 bool check_for_datatype(char* text) {
     for(int i = 0; i < NOF_DATATYPES; i++) {
-        if (strcmp(keywords[i], text) == 0) {
+        if (strcmp(datatypes[i], text) == 0) {
             return true;
         }
     }
     return false;
 }
 
+TokenType keyword_to_token(char* keyword) {
+    if (strcmp(keyword, "else") == 0) {
+        return TOKEN_ELSE;
+    }
+    else if (strcmp(keyword, "func") == 0) {
+        return TOKEN_FUNC;
+    }
+    else if (strcmp(keyword, "if") == 0) {
+        return TOKEN_IF;
+    }
+    else if (strcmp(keyword, "let") == 0) {
+        return TOKEN_LET;
+    }
+    else if (strcmp(keyword, "nil") == 0) {
+        return TOKEN_NIL;
+    }
+    else if (strcmp(keyword, "return") == 0) {
+        return TOKEN_RETURN;
+    }
+    else if (strcmp(keyword, "var") == 0) {
+        return TOKEN_VAR;
+    }
+    else if (strcmp(keyword, "while") == 0) {
+        return TOKEN_WHILE;
+    } else {
+        return TOKEN_ZERO;
+    }
+}
+
+TokenType datatype_to_token(char* datatype) {
+    if (strcmp(datatype, "Double") == 0) {
+        return TOKEN_DT_DOUBLE;
+    } else if (strcmp(datatype, "Int") == 0) {
+        return TOKEN_DT_INT;
+    } else if (strcmp(datatype, "String") == 0) {
+        return TOKEN_DT_STRING;
+    } else {
+        return TOKEN_ZERO;
+    }
+}
+
+
 void append_and_check(BufferT *buffer, const char ch) {
     if (buffer_append(buffer, ch) != BUFF_APPEND_SUCCES) {
         fprintf(stderr, "Internal compiler error. \n");
         exit(INTERNAL_COMPILER_ERROR);
     }
-    fprintf(stderr, "%s \n", buffer->bytes);
+    // fprintf(stderr, "%s \n", buffer->bytes);
 }
 
 void error_exit(TokenT *token, BufferT *buffer, char* message, int exit_code) {
@@ -51,12 +93,14 @@ TokenT* generate_token() {
 
     int multiline_string_counter = 0;
     bool multiline_string_ok = false;
+    bool escape_next = false;
     // V pripade ze chci vratit charakter do stdin:
     // ungetc(ch, stream);
 
     int ch;
     while (true) {
         ch = fgetc(stream);
+        // printf("[%c]\n", ch);
 
         switch (state) {
             case STATE_START:
@@ -142,10 +186,11 @@ TokenT* generate_token() {
                     append_and_check(&buffer, ch);
                 } else {
                     if (check_for_keyword(buffer.bytes)) {
-                        token_init(token, TOKEN_KEYWORD, &buffer);
+                        token_init(token, keyword_to_token(buffer.bytes), &buffer);
                     } else if(check_for_datatype(buffer.bytes)) {
-                        token_init(token, TOKEN_DATATYPE, &buffer);
+                        token_init(token, datatype_to_token(buffer.bytes), &buffer);
                     } else {
+                        // printf("BUFFER: %s\n", buffer.bytes);
                         token_init(token, TOKEN_IDENTIFIER, &buffer);
                     }
                     ungetc(ch, stream);
@@ -163,7 +208,7 @@ TokenT* generate_token() {
                     buffer_clear(&buffer);
                 }
                 else {
-                    token_init(token, TOKEN_TERM, &buffer);
+                    token_init(token, TOKEN_OPERATOR, &buffer);
                     ungetc(ch, stream);
                     return token;
                 }
@@ -190,6 +235,30 @@ TokenT* generate_token() {
                 break;
 
             case STATE_STRING:
+                if (escape_next) {
+                    switch (ch) {
+                        case '"':
+                            append_and_check(&buffer, '\"');
+                            break;
+                        case 'n':
+                            append_and_check(&buffer, '\n');
+                            break;
+                        case 'r':
+                            append_and_check(&buffer, '\r');
+                            break;
+                        case 't':
+                            append_and_check(&buffer, '\t');
+                            break;
+                        case '\\':
+                            append_and_check(&buffer, '\\');
+                            break;
+                        default:
+                            error_exit(token, &buffer, "Invalid escape sequence.", LEXICAL_ERROR);
+                            break;
+                    }
+                    escape_next = false;
+                    break;
+                }
                 if (ch == '"') {
                     if (buffer.length == 0) {
                         state = STATE_TWO_DOUBLE_QUOTES;
@@ -199,6 +268,10 @@ TokenT* generate_token() {
                         token_init(token, TOKEN_STRING, &buffer);
                         return token;
                     }
+                }
+                else if (ch == '\\') {
+                    escape_next = true;
+                    break;
                 }
                 append_and_check(&buffer, ch);
                 break;
@@ -278,7 +351,7 @@ TokenT* generate_token() {
                     return token;
                 } 
                 else {
-                    token_init(token, TOKEN_OPERATOR, &buffer);
+                    token_init(token, TOKEN_NULLABLE, &buffer);
                     ungetc(ch, stream);
                     return token;
                 }
@@ -302,7 +375,9 @@ TokenT* generate_token() {
                     state = STATE_DECIMAL_POINT;
                     append_and_check(&buffer, ch);
                 }
-                else if (!(isdigit(ch) || ch == '0')) {
+                else if (isdigit(ch) || ch == '0') {
+                    append_and_check(&buffer, ch);
+                } else {
                     token_init(token, TOKEN_INTEGER, &buffer);
                     ungetc(ch, stream);
                     return token;
@@ -321,10 +396,11 @@ TokenT* generate_token() {
 
             case STATE_DECIMAL:
                 if (!(isdigit(ch) || ch == '0')) {
-                    token_init(token, TOKEN_DECIMAL, &buffer);
+                    token_init(token, TOKEN_DOUBLE, &buffer);
                     ungetc(ch, stream);
                     return token;
                 }
+                append_and_check(&buffer, ch);
                 break;
 
         }
@@ -332,17 +408,16 @@ TokenT* generate_token() {
 }
 
 int main() {
-    TokenT* token = NULL;
-    while (true) {
+    TokenT* token = generate_token();
+    while (token != NULL && token->type != TOKEN_EOF) {
+        
+        printf("TOKEN T%d VALUE ", token->type);
+        print_Token(token);
+
+        // token_dtor(token);
         token = generate_token();
-        if (token->type == TOKEN_EOF) {
-            token_dtor(token);
-            break;
-        }
-
-        printf("TOKEN T%d VALUE %s\n", token->type, token->value.str);
-
-        token_dtor(token);
     }
+    // printf("TOKEN T%d VALUE [%s]\n", token->type, token->value.str);
+
     return 0;
 }

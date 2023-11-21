@@ -74,13 +74,28 @@ typedef union {
 typedef enum tokentype_e {
     TOKEN_ZERO,
     TOKEN_IDENTIFIER,
-    TOKEN_KEYWORD,
-    TOKEN_DATATYPE,
+
+    TOKEN_DT_DOUBLE,
+    TOKEN_DT_INT,
+    TOKEN_DT_STRING,
+
+    TOKEN_LET,
+    TOKEN_VAR,
+
+    TOKEN_RETURN,
+    TOKEN_IF,
+    TOKEN_ELSE,
+    TOKEN_WHILE,
+    TOKEN_FUNC,
+    TOKEN_NIL,
+
+    TOKEN_OPERATOR,
+
+    TOKEN_NULLABLE,
     TOKEN_STRING, 
     TOKEN_INTEGER, 
-    TOKEN_DECIMAL,
-    TOKEN_TERM,
-    TOKEN_OPERATOR,
+    TOKEN_DOUBLE,
+
     TOKEN_LINE_COMMENT,
     TOKEN_BLOCK_COMMENT,
     TOKEN_ASSIGNMENT,
@@ -90,6 +105,7 @@ typedef enum tokentype_e {
     TOKEN_RIGHT_CURLY_BRACKET,
     TOKEN_COLON,
     TOKEN_COMMA,
+
     TOKEN_EOF
 } TokenType;
 
@@ -194,6 +210,7 @@ void Stack_Dispose(Stack *);
 */
 token_ret_t token_init(TokenT *token,TokenType type, BufferT *buff);
 
+void print_Token(TokenT *token);
 
 /**
  * @brief Clears token from memory
