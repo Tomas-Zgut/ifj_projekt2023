@@ -20,18 +20,21 @@ typedef enum fsm_state_e {
     STATE_EQUALS,
     STATE_EXCLAMATION,
     STATE_QUESTION,
-    STATE_RELATIONAL_OPERATOR
+    STATE_RELATIONAL_OPERATOR,
+    STATE_NUMBER,
+    STATE_DECIMAL,
+    STATE_DECIMAL_POINT
 } ScannerState;
 
-#define MAX_STRLEN 255 // NENI OMEZENA, VYRESIT !!
 #define NOF_KEYWORDS 8
 #define NOF_DATATYPES 3
+#define MAX_DTT_KWD_LEN 10
 
-char keywords[NOF_KEYWORDS][10] = {
+char keywords[NOF_KEYWORDS][MAX_DTT_KWD_LEN] = {
     "else", "func", "if", "let", "nil", "return", "var", "while"
 };
 
-char datatypes[NOF_DATATYPES][10] = {
+char datatypes[NOF_DATATYPES][MAX_DTT_KWD_LEN] = {
     "Double", "Int", "String"
 };
 

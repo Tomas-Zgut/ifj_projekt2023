@@ -58,11 +58,14 @@ TokenT* generate_token() {
     while (true) {
         ch = fgetc(stream);
 
-
         switch (state) {
             case STATE_START:
                 if (isalpha(ch) || ch == '_') {
                     state = STATE_TEXT;
+                    append_and_check(&buffer, ch);
+                }
+                else if (isdigit(ch) || ch == '0') {
+                    state = STATE_NUMBER;
                     append_and_check(&buffer, ch);
                 }
                 else if (isspace(ch)) {
@@ -113,12 +116,12 @@ TokenT* generate_token() {
                 }
                 else if (ch == ':') {
                     append_and_check(&buffer, ch);
-                    token_init(token, TOKEN_RIGHT_ROUND_BRACKET, &buffer);
+                    token_init(token, TOKEN_COLON, &buffer);
                     return token;
                 }
                 else if (ch == '{') {
                     append_and_check(&buffer, ch);
-                    token_init(token, TOKEN_COLON, &buffer);
+                    token_init(token, TOKEN_LEFT_CURLY_BRACKET, &buffer);
                     return token;
                 }
                 else if (ch == '}') {
@@ -145,7 +148,7 @@ TokenT* generate_token() {
                     } else {
                         token_init(token, TOKEN_IDENTIFIER, &buffer);
                     }
-
+                    ungetc(ch, stream);
                     return token;
                 }
                 break;
@@ -161,23 +164,21 @@ TokenT* generate_token() {
                 }
                 else {
                     token_init(token, TOKEN_TERM, &buffer);
+                    ungetc(ch, stream);
                     return token;
                 }
-
                 break;
 
             case STATE_LINE_COMMENT:
                 if (ch == '\n') {
                     state = STATE_START;
                 }
-
                 break;
 
             case STATE_BLOCK_COMMENT:
                 if (ch == '*') {
                     state = STATE_END_BLOCK_COMMENT;
                 }
-
                 break;
 
             case STATE_END_BLOCK_COMMENT:
@@ -186,7 +187,6 @@ TokenT* generate_token() {
                 } else {
                     state = STATE_BLOCK_COMMENT;
                 }
-
                 break;
 
             case STATE_STRING:
@@ -194,24 +194,24 @@ TokenT* generate_token() {
                     if (buffer.length == 0) {
                         state = STATE_TWO_DOUBLE_QUOTES;
                         break;
-                    } else {
+                    } 
+                    else {
                         token_init(token, TOKEN_STRING, &buffer);
                         return token;
                     }
                 }
                 append_and_check(&buffer, ch);
-
                 break;
 
             case STATE_TWO_DOUBLE_QUOTES:
                 if (ch == '"') {
                     state = STATE_MULTILINE_STRING;
-                } else {
+                } 
+                else {
                     ungetc(ch, stream);
                     token_init(token, TOKEN_STRING, &buffer);
                     return token;
                 }
-
                 break;
 
             case STATE_MULTILINE_STRING:
@@ -228,7 +228,8 @@ TokenT* generate_token() {
                         // token->value = buffer;
                         return token;
                     }
-                } else {
+                } 
+                else {
                     multiline_string_counter = 0;
                     if (!multiline_string_ok) {
                         if (ch != '\n') {
@@ -249,44 +250,82 @@ TokenT* generate_token() {
                     append_and_check(&buffer, ch);
                     token_init(token, TOKEN_OPERATOR, &buffer);
                     return token;
-                } else {
+                } 
+                else {
                     token_init(token, TOKEN_OPERATOR, &buffer);
                     ungetc(ch, stream);
                     return token;
                 }
+                break;
 
             case STATE_EQUALS:
                 if (ch == '=') {
                     append_and_check(&buffer, ch);
                     token_init(token, TOKEN_OPERATOR, &buffer);
                     return token;
-                } else {
+                } 
+                else {
                     token_init(token, TOKEN_ASSIGNMENT, &buffer);
                     ungetc(ch, stream);
                     return token;
                 }
+                break;
 
             case STATE_QUESTION:
                 if (ch == '?') {
                     append_and_check(&buffer, ch);
                     token_init(token, TOKEN_OPERATOR, &buffer);
                     return token;
-                } else {
+                } 
+                else {
                     token_init(token, TOKEN_OPERATOR, &buffer);
                     ungetc(ch, stream);
                     return token;
                 }
+                break;
 
             case STATE_RELATIONAL_OPERATOR:
                 if (ch == '=') {
                     append_and_check(&buffer, ch);
                     token_init(token, TOKEN_OPERATOR, &buffer);
                     return token;
-                } else {
+                } 
+                else {
                     token_init(token, TOKEN_OPERATOR, &buffer);
                     ungetc(ch, stream);
                     return token;
                 }
+                break;
+
+            case STATE_NUMBER:
+                if (ch == '.') {
+                    state = STATE_DECIMAL_POINT;
+                    append_and_check(&buffer, ch);
+                }
+                else if (!(isdigit(ch) || ch == '0')) {
+                    token_init(token, TOKEN_INTEGER, &buffer);
+                    ungetc(ch, stream);
+                    return token;
+                }
+                break;
+
+            case STATE_DECIMAL_POINT:
+                if (!(isdigit(ch) || ch == '0')) {
+                    error_exit(token, &buffer, "Lexical error", LEXICAL_ERROR);
+                }
+                else {
+                    state = STATE_DECIMAL;
+                    append_and_check(&buffer, ch);
+                }
+                break;
+
+            case STATE_DECIMAL:
+                if (!(isdigit(ch) || ch == '0')) {
+                    token_init(token, TOKEN_DECIMAL, &buffer);
+                    ungetc(ch, stream);
+                    return token;
+                }
+                break;
 
         }
     }
